@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 # Installer for LibreOffice PPT-Style Math Workflow (Espanso Rules)
-# Usage: bash install.sh
+# Usage:
+#   bash install.sh                    # Install globally
+#   bash install.sh --libreoffice-only # Scope rules to LibreOffice only
 
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SOURCE_FILE="$SCRIPT_DIR/config/ppt_math.yml"
-TARGET_DIR="$HOME/.config/espanso/match"
-TARGET_FILE="$TARGET_DIR/ppt_math.yml"
+LIBREOFFICE_ONLY=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --libreoffice-only)
+            LIBREOFFICE_ONLY=true
+            ;;
+        *)
+            echo "Unknown option: $arg"
+            echo "Usage: bash install.sh [--libreoffice-only]"
+            exit 1
+            ;;
+    esac
+done
 
 echo "=== LibreOffice PPT-Style Math Installer ==="
 
@@ -18,33 +31,74 @@ if ! command -v espanso &> /dev/null; then
     exit 1
 fi
 
-# 2. Verify source config exists (or generate it if Python script is present)
-if [ ! -f "$SOURCE_FILE" ]; then
-    if [ -f "$SCRIPT_DIR/scripts/generate_rules.py" ]; then
-        echo "Generating config/ppt_math.yml..."
-        python3 "$SCRIPT_DIR/scripts/generate_rules.py"
-    else
-        echo "Error: Could not find $SOURCE_FILE."
+# 2. Detect Espanso base config directory (Linux, macOS, Windows/Git Bash)
+ESPANSO_BASE_DIR="$(espanso path config 2>/dev/null || true)"
+if [ -z "$ESPANSO_BASE_DIR" ]; then
+    ESPANSO_BASE_DIR="$HOME/.config/espanso"
+fi
+
+MATCH_DIR="$ESPANSO_BASE_DIR/match"
+CONFIG_DIR="$ESPANSO_BASE_DIR/config"
+mkdir -p "$MATCH_DIR" "$CONFIG_DIR"
+
+TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+backup_if_exists() {
+    local file="$1"
+    if [ -f "$file" ]; then
+        local bak="${file}.bak.${TIMESTAMP}"
+        echo "Backing up $(basename "$file") -> $bak"
+        cp "$file" "$bak"
+    fi
+}
+
+# 3. Install rules
+if [ "$LIBREOFFICE_ONLY" = true ]; then
+    if ! command -v python3 &> /dev/null; then
+        echo "Error: python3 is required for --libreoffice-only installation."
         exit 1
     fi
+
+    backup_if_exists "$MATCH_DIR/_ppt_math.yml"
+    backup_if_exists "$CONFIG_DIR/libreoffice_math.yml"
+
+    # Remove old global file (after backing up) so rules don't fire outside LibreOffice
+    if [ -f "$MATCH_DIR/ppt_math.yml" ]; then
+        backup_if_exists "$MATCH_DIR/ppt_math.yml"
+        rm -f "$MATCH_DIR/ppt_math.yml"
+    fi
+
+    python3 "$SCRIPT_DIR/scripts/generate_rules.py" --install --libreoffice-only
+else
+    SOURCE_FILE="$SCRIPT_DIR/config/ppt_math.yml"
+    if [ ! -f "$SOURCE_FILE" ]; then
+        if [ -f "$SCRIPT_DIR/scripts/generate_rules.py" ]; then
+            echo "Generating config/ppt_math.yml..."
+            python3 "$SCRIPT_DIR/scripts/generate_rules.py"
+        else
+            echo "Error: Could not find $SOURCE_FILE."
+            exit 1
+        fi
+    fi
+
+    backup_if_exists "$MATCH_DIR/ppt_math.yml"
+
+    # Clean up any old LibreOffice-only files when switching back to global
+    if [ -f "$MATCH_DIR/_ppt_math.yml" ]; then
+        backup_if_exists "$MATCH_DIR/_ppt_math.yml"
+        rm -f "$MATCH_DIR/_ppt_math.yml"
+    fi
+    if [ -f "$CONFIG_DIR/libreoffice_math.yml" ]; then
+        backup_if_exists "$CONFIG_DIR/libreoffice_math.yml"
+        rm -f "$CONFIG_DIR/libreoffice_math.yml"
+    fi
+
+    cp "$SOURCE_FILE" "$MATCH_DIR/ppt_math.yml"
+    echo "Installed global rules to $MATCH_DIR/ppt_math.yml"
 fi
 
-# 3. Create Espanso match directory if missing
-mkdir -p "$TARGET_DIR"
-
-# 4. Back up existing ppt_math.yml if present
-if [ -f "$TARGET_FILE" ]; then
-    BACKUP_FILE="${TARGET_FILE}.bak.$(date +%Y%m%d_%H%M%S)"
-    echo "Backing up existing ppt_math.yml to $BACKUP_FILE"
-    cp "$TARGET_FILE" "$BACKUP_FILE"
-fi
-
-# 5. Copy new rules and restart Espanso
-cp "$SOURCE_FILE" "$TARGET_FILE"
-echo "Installed rules to $TARGET_FILE"
-
+# 4. Restart (or start) Espanso safely
 echo "Restarting Espanso..."
-espanso restart
+espanso restart || espanso start
 
 echo ""
 echo "Done! Try typing '\\alpha^2 + \\beta^2 -> \\infty ' in LibreOffice Impress or Writer."
