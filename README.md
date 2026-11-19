@@ -1,3 +1,13 @@
+
+
+https://github.com/user-attachments/assets/04532d7d-3800-45fc-a8ed-c40ffbd63c70
+
+
+
+Uploading gemini_generated_video_bc2c585b.mp4…
+
+
+
 # libreoffice-ppt-math
 
 Type math in **LibreOffice Impress & Writer** just like PowerPoint's Math AutoCorrect (`\alpha` → `α`, `^2` → `²`, `^{n+1}` → `ⁿ⁺¹`, `->` → `→`).
