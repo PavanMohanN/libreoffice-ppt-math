@@ -5,7 +5,7 @@ Type math natively in **LibreOffice Impress & Writer** just like PowerPoint's Ma
 
 ## Demo
 
-https://github.com/user-attachments/assets/04532d7d-3800-45fc-a8ed-c40ffbd63c70
+https://github.com/user-attachments/assets/afd03600-a268-4daa-945e-0b4af9ce8631
 
 *Typing `\alpha^2 + \beta^2 -> \infty` natively in LibreOffice Impress.*
 
