@@ -2,7 +2,7 @@
 
 ## Demo
 
-https://github.com/user-attachments/assets/04532d7d-3800-45fc-a8ed-c40ffbd63c70
+https://github.com/user-attachments/assets/a69e2a02-92cf-45cd-a3bb-c1a4e5b2e0c1
 
 *Typing `\alpha^2 + \beta^2 -> \infty` natively in LibreOffice Impress.*
 
