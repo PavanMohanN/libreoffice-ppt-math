@@ -1,13 +1,13 @@
+# libreoffice-ppt-math
 
-
-## Demo
+### Demo
 
 https://github.com/user-attachments/assets/a69e2a02-92cf-45cd-a3bb-c1a4e5b2e0c1
 
 *Typing `\alpha^2 + \beta^2 -> \infty` natively in LibreOffice Impress. *AI Generated *
 
 
-# libreoffice-ppt-math
+
 
 Type math in **LibreOffice Impress & Writer** just like PowerPoint's Math AutoCorrect (`\alpha` → `α`, `^2` → `²`, `^{n+1}` → `ⁿ⁺¹`, `->` → `→`).
 
