@@ -37,7 +37,6 @@ ADDING YOUR OWN SYMBOLS
 """
 
 import argparse
-import base64
 import os
 import re
 import shutil
@@ -46,7 +45,6 @@ import sys
 import tempfile
 import unicodedata
 import zipfile
-import zlib
 from pathlib import Path
 
 # ╔══════════════════════════════════════════════════════════════════════════╗
@@ -406,7 +404,7 @@ LIBREOFFICE_CONFLICTS = [
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
 ENGINE_TEMPLATE = r"""
-import os, sys, unicodedata, zlib, binascii
+import os, sys, unicodedata
 try:
     sys.stderr = open(os.devnull, 'w')
 except Exception:
@@ -427,7 +425,7 @@ def _lc(s):
     for k, v in _ld(s).items():
         d[chr(int(k, 16))] = v
     return d
-SYM = _ld(zlib.decompress(binascii.a2b_base64('@SYMZ@')).decode('ascii'))
+SYM = _ld('@SYM@')
 BIG = set('@BIG@'.split(','))
 FUN = set('@FUN@'.split(','))
 ACC = _ld('@ACC@')
@@ -1181,8 +1179,7 @@ def build_engine(tables, buffer_size=DEFAULT_BUFFER):
         "@SQRT@": "parens" if SETTINGS.get("sqrt_style") == "parens" else "vinculum",
         "@MINUS@": "True" if SETTINGS.get("minus_sign", True) else "False",
         "@THIN@": "True" if SETTINGS.get("thin_space_after_operators", True) else "False",
-        "@SYMZ@": base64.b64encode(zlib.compress(
-            _enc_names(tables["symbols"]).encode("ascii"), 9)).decode("ascii"),
+        "@SYM@": _enc_names(tables["symbols"]),
         "@BIG@": ",".join(sorted(tables["big"])),
         "@FUN@": ",".join(sorted(tables["functions"])),
         "@ACC@": _enc_names(ACCENTS),
@@ -1284,6 +1281,12 @@ def render_match_yaml(regex, engine_src, python_cmd, inject_mode="auto", note=""
         "#",
         "# Type an expression WITHOUT spaces (LaTeX / PowerPoint linear format),",
         "# then press SPACE.  Examples: \\alpha  x^2  \\int_0^1  \\sum_{i=1}^{n}  a<=b",
+        "#",
+        "# How it works: one regex fires on SPACE after a whitespace-free token that",
+        "# contains math syntax. The embedded Python script (standard library only,",
+        "# no network, no file access) reads the token from ESPANSO_TOK and prints",
+        "# the Unicode result. Symbol tables are stored as 'name:hex-codepoint' pairs,",
+        "# e.g. alpha:3b1 = U+03B1 (alpha). Source: scripts/generate_rules.py",
     ]
     if note:
         lines.append(f"# {note}")
@@ -1807,7 +1810,16 @@ def main(argv=None):
                    help="set Espanso's max_regex_buffer_size (default 30) to allow longer expressions")
     p.add_argument("--inject-mode", choices=["auto", "clipboard", "keys"], default="auto",
                    help="how Espanso types the result (clipboard avoids app autocorrect re-firing)")
+    argv = list(sys.argv[1:] if argv is None else argv)
+    try_exprs = None
+    if "--try" in argv:                  # everything after --try is an expression, even "->"
+        k = argv.index("--try")
+        argv, try_exprs = argv[:k], argv[k + 1:]
+        if not try_exprs:
+            p.error("--try needs at least one expression")
     args = p.parse_args(argv)
+    if try_exprs is not None:
+        args.try_exprs = try_exprs
 
     try:
         tables = build_tables()
