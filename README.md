@@ -1,6 +1,6 @@
 # libreoffice-ppt-math
 
-Type math in LibreOffice Impress and Writer just like PowerPoint's Math AutoCorrect (`\alpha` → `α`, `^2` → `²`, `^{n+1}` → `ⁿ⁺¹`, `->` → `→`)[cite: 1, 2]. Powered by [Espanso](https://espanso.org)
+Type math in LibreOffice Impress and Writer just like PowerPoint's Math AutoCorrect (`\alpha` → `α`, `^2` → `²`, `^{n+1}` → `ⁿ⁺¹`, `->` → `→`). Powered by [Espanso](https://espanso.org)
 
 ## Install & Run (Linux)
 
