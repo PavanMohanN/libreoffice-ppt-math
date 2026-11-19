@@ -26,7 +26,7 @@ Before installing, make sure you have these free tools:
 
 ## Step 2: Install
 
-### Option 1: Fastest (1-Line Espanso Install)
+### Fastest 1-Line Espanso Install
 Works on Linux, macOS, and Windows without cloning the repo:
 
 ```bash
