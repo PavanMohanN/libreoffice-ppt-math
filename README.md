@@ -30,5 +30,5 @@ Before installing, make sure you have these free tools:
 Works on Linux, macOS, and Windows without cloning the repo:
 
 ```bash
-espanso install libreoffice-ppt-math --git [https://github.com/PavanMohanN/libreoffice-ppt-math](https://github.com/PavanMohanN/libreoffice-ppt-math) --external
+espanso install libreoffice-ppt-math --git https://github.com/PavanMohanN/libreoffice-ppt-math --external
 espanso restart

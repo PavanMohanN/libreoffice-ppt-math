@@ -69,10 +69,10 @@ if [ "$LIBREOFFICE_ONLY" = true ]; then
 
     python3 "$SCRIPT_DIR/scripts/generate_rules.py" --install --libreoffice-only
 else
-    SOURCE_FILE="$SCRIPT_DIR/config/ppt_math.yml"
+    SOURCE_FILE="$SCRIPT_DIR/package.yml"
     if [ ! -f "$SOURCE_FILE" ]; then
         if [ -f "$SCRIPT_DIR/scripts/generate_rules.py" ]; then
-            echo "Generating config/ppt_math.yml..."
+            echo "Generating package.yml..."
             python3 "$SCRIPT_DIR/scripts/generate_rules.py"
         else
             echo "Error: Could not find $SOURCE_FILE."

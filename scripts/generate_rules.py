@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 Generator script for PowerPoint-Style Math AutoCorrect rules (Espanso).
-Builds config/ppt_math.yml with collision-proof triggers and regex expansions.
+Builds package.yml with collision-proof triggers and regex expansions.
 
 Usage:
-    python3 scripts/generate_rules.py                         # Writes to config/ppt_math.yml
-    python3 scripts/generate_rules.py --install               # Installs globally to Espanso match dir
+    python3 scripts/generate_rules.py                               # Writes to package.yml
+    python3 scripts/generate_rules.py --install                     # Installs globally to Espanso match dir
     python3 scripts/generate_rules.py --install --libreoffice-only  # Scopes rules to LibreOffice only
 """
 
@@ -43,16 +43,14 @@ GREEK_AND_OPERATORS = {
     "\\therefore": "∴", "\\because": "∵",
     "\\R": "ℝ", "\\C": "ℂ", "\\N": "ℕ", "\\Z": "ℤ",
     "\\uparrow": "↑", "\\downarrow": "↓", "\\mapsto": "↦",
+    "\\to": "→", "\\gets": "←", "\\leftrightarrow": "↔", "\\iff": "⇔",
 }
 
-# 2. Instant triggers (fire immediately without needing Space)
+# 2. Instant triggers (non-overlapping; trailing space prevents <- / <= preempting <-> / <=>)
 INSTANT_TRIGGERS = {
     # Operators & Arrows
-    "!=": "≠", "<=": "≤", ">=": "≥", "~=": "≈",
-    "<->": "↔", "->": "→", "<-": "←", "<=>": "⇔", "=>": "⇒",
-
-    # Common Fractions
-    "1/2": "½", "1/3": "⅓", "2/3": "⅔", "1/4": "¼", "3/4": "¾",
+    "!=": "≠", "<= ": "≤ ", ">=": "≥", "~=": "≈",
+    "<->": "↔", "->": "→", "<- ": "← ", "<=>": "⇔", "=>": "⇒",
 
     # Single-character Superscripts
     "^0": "⁰", "^1": "¹", "^2": "²", "^3": "³", "^4": "⁴",
@@ -65,11 +63,16 @@ INSTANT_TRIGGERS = {
     "_n": "ₙ", "_i": "ᵢ", "_x": "ₓ", "_+": "₊", "_-": "₋",
 }
 
-# 3. Regex rules for multi-character super/subscripts & accents
+# 3. Word-boundary fractions (prevents 1/20 -> ½0 or 11/2 -> 1½)
+WORD_FRACTIONS = {
+    "1/2": "½", "1/3": "⅓", "2/3": "⅔", "1/4": "¼", "3/4": "¾",
+}
+
+# 4. Regex rules for multi-character super/subscripts & accents
 REGEX_RULES_YAML = """  # ==========================================
   # REGEX: MULTI-CHARACTER SUPER/SUBSCRIPTS & ACCENTS
   # ==========================================
-  - regex: "\\\\^\\\\{(?P<exp>[0-9a-zA-Z+\\\\-=()]+)\\\\}"
+  - regex: "\\\\^\\\\{(?P<exp>[0-9a-pr-zABDEGHIJKLMNOPRTUVW+\\\\-=()]+)\\\\}"
     replace: "{{output}}"
     vars:
       - name: output
@@ -160,10 +163,18 @@ def generate_yaml(output_path: Path) -> None:
             f.write(f'  - trigger: "{trig}"\n')
             f.write(f'    replace: "{rep}"\n')
 
+        f.write("\n  # ==========================================\n")
+        f.write("  # WORD-BOUNDARY FRACTIONS\n")
+        f.write("  # ==========================================\n")
+        for trig, rep in WORD_FRACTIONS.items():
+            f.write(f'  - trigger: "{trig}"\n')
+            f.write(f'    replace: "{rep}"\n')
+            f.write("    word: true\n")
+
         f.write("\n")
         f.write(REGEX_RULES_YAML)
 
-    total = len(GREEK_AND_OPERATORS) + len(INSTANT_TRIGGERS) + 6
+    total = len(GREEK_AND_OPERATORS) + len(INSTANT_TRIGGERS) + len(WORD_FRACTIONS) + 6
     print(f"Successfully generated {output_path} ({total} rules).")
 
 
@@ -194,12 +205,13 @@ def main() -> None:
             generate_yaml(base_dir / "match" / "ppt_math.yml")
     else:
         repo_root = Path(__file__).resolve().parent.parent
-        filename = "_ppt_math.yml" if args.libreoffice_only else "ppt_math.yml"
-        generate_yaml(repo_root / "config" / filename)
         if args.libreoffice_only:
+            generate_yaml(repo_root / "config" / "_ppt_math.yml")
             filter_target = repo_root / "config" / "libreoffice_math.yml"
             filter_target.write_text(LIBREOFFICE_FILTER_YAML, encoding="utf-8")
             print(f"Created LibreOffice-only filter at {filter_target}.")
+        else:
+            generate_yaml(repo_root / "package.yml")
 
 
 if __name__ == "__main__":
