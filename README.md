@@ -118,7 +118,3 @@ bash uninstall.sh
 
 MIT License — see [LICENSE](https://www.google.com/search?q=LICENSE) for details.
 
-```
-**One quick thing before you push:** Run `python3 scripts/generate_rules.py` once so your repo's `config/ppt_math.yml` includes the newly added `\R`, `\C`, `\N`, `\Z`, `\degree`, `\hat`, and `\tilde` rules—otherwise Option A (`bash install.sh`) will copy the older file.
-
-```
