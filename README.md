@@ -1,11 +1,10 @@
 
 
+## Demo
+
 https://github.com/user-attachments/assets/04532d7d-3800-45fc-a8ed-c40ffbd63c70
 
-
-
-Uploading gemini_generated_video_bc2c585b.mp4…
-
+*Typing `\alpha^2 + \beta^2 -> \infty` natively in LibreOffice Impress.*
 
 
 # libreoffice-ppt-math
