@@ -1,48 +1,30 @@
 # LibreOffice PPT-Style Math Workflow 🚀
 
-Bring Microsoft PowerPoint-style math shortcuts and AutoCorrect behavior to **LibreOffice Impress** and **Writer** on Linux using Espanso and TexMaths [PavanMohanN/libreoffice-ppt-math].
+[![License: MIT](https://shields.io)](https://opensource.org)
+[![Powered by Espanso](https://shields.io)](https://espanso.org)
+
+Bring a Microsoft PowerPoint-style math editing experience to **LibreOffice Impress** and **LibreOffice Writer** using Espanso and TexMaths.
 
 ---
 
 ## ✨ What You Get
-* **Mid-Sentence Math:** Type standard shortcuts like `\alpha`, `\beta`, `\sum`, or `^2` directly into documents with automatic conversion [PavanMohanN/libreoffice-ppt-math].
-* **Stacked 2D Equations:** Combine with TexMaths and `Ctrl + =` to render re-editable LaTeX expressions [PavanMohanN/libreoffice-ppt-math].
+
+* **Inline Math Typing:** Automatically convert LaTeX-style symbols (`\alpha`, `\beta`, `\sum`, `->`, `^2`) directly inside your documents.
+* **Complex Powers & Subscripts:** Format expressions like `e^{2n+1}` or `x_{i+1}`.
+* **True Stacked Equations:** Render 2D equations via `Ctrl + =` using TexMaths.
 
 ---
 
-## 🛠️ Step-by-Step Setup Guide
+## 🛠️ Quick Setup Overview
 
-### Step 1: Install Espanso
-Register and start the Espanso service on X11/Linux Mint/Ubuntu systems (refer to the [official Espanso docs](https://espanso.org)) [PavanMohanN/libreoffice-ppt-math]:
-```bash
-wget https://github.com
-sudo apt install ./espanso-debian-x11-amd64.deb
-rm espanso-debian-x11-amd64.deb
-espanso service register
-espanso start
-```
-
-### Step 2: Install the Math Shortcut Pack
-Clone the repository and run the installation script [PavanMohanN/libreoffice-ppt-math]:
-```bash
-git clone https://github.com
-cd libreoffice-ppt-math
-bash install.sh
-```
-
-### Step 3: Set Up Stacked Fractions & TexMaths (Optional)
-1. Install LaTeX dependencies and the **TexMaths** extension via LibreOffice **Tools > Extension Manager** [PavanMohanN/libreoffice-ppt-math].
-2. Bind `Ctrl + =` to `TexMathsEquations -> main` and switch the output format to **SVG** [PavanMohanN/libreoffice-ppt-math].
+1. **Install Espanso:** Set up the auto-typing engine for your Linux distribution (see {Link: Espanso documentation https://espanso.orgdocs/install/linux/}).
+2. **Install the Shortcut Pack:** Clone the workflow repository and run the setup script.
+3. **Configure TexMaths (Optional):** Install the TexMaths extension from {Link: SourceForge https://sourceforge.net} and assign `Ctrl + =` to launch equations.
 
 ---
 
 ## ⌨️ Quick Cheat Sheet
-* **Inline Examples:** `\alpha ` $\rightarrow$ `α`, `->` $\rightarrow$ `→`, `x^2` $\rightarrow$ `x²` [PavanMohanN/libreoffice-ppt-math].
-* **Stacked Equations:** Press `Ctrl + =`, type your LaTeX expression, and press `Enter` [PavanMohanN/libreoffice-ppt-math].
 
-For the complete set of scripts and setup instructions, visit the [GitHub repository](https://github.com).
-
----
-
-## 📄 License
-MIT License — free to use, modify, and share [PavanMohanN/libreoffice-ppt-math].
+* **Greek & Arrows:** `\alpha ` → `α`, `\theta ` → `θ`, `->` → `→`, `!=` → `≠`, `\infty ` → `∞`
+* **Operators & Scripts:** `\sum ` → `∑`, `1/2` → `½`, `x^2` → `x²`, `x_1` → `x₁`
+* **Stacked Equations:** Press `Ctrl + =` in LibreOffice Impress or Writer, enter LaTeX code, and press `Enter`.
