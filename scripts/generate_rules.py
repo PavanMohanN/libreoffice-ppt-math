@@ -1397,7 +1397,7 @@ def render_libreoffice_config(match_filename):
     return (
         f"# {HEADER_MARK} -- {GENERATED_BY}.\n"
         "# Activates the math rules only while LibreOffice (soffice) is focused.\n"
-        "# Note: app-specific configs need X11, Windows or macOS (not Wayland).\n"
+        "# App detection works on Windows, macOS, X11 and KDE Wayland (with kdotool).\n"
         'filter_exec: "(?i)soffice"\n'
         "extra_includes:\n"
         f'  - "../match/{match_filename}"\n'
@@ -1720,8 +1720,11 @@ def print_diagnostics(base, own_paths, tables, buffer_size, lo_only, python_cmd,
     if not copies and not conflicts:
         print("  No conflicting Espanso rules found.")
     if lo_only and os.environ.get("XDG_SESSION_TYPE", "").lower() == "wayland":
-        print("  ! Wayland session: Espanso cannot detect the focused app, so the\n"
-              "    LibreOffice-only filter never activates. Use a global install instead.")
+        kde = "KDE" in os.environ.get("XDG_CURRENT_DESKTOP", "").upper()
+        if not (kde and shutil.which("kdotool")):
+            print("  ! Wayland session: Espanso can detect the focused app only on KDE with\n"
+                  "    kdotool installed, so the LibreOffice-only filter may never activate.\n"
+                  "    Install kdotool (KDE) or use a global install instead.")
     scanned, found = scan_libreoffice_autocorrect()
     for dat, hits in found.items():
         print(f"  ! LibreOffice AutoCorrect conflicts in {dat}: {', '.join(hits)}")
