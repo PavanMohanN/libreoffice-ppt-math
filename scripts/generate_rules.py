@@ -409,7 +409,28 @@ try:
     sys.stderr = open(os.devnull, 'w')
 except Exception:
     pass
-LIMIT = @LIMIT@
+BUFFER = @BUFFER@
+MARGIN = @MARGIN@
+
+def buffer_size():
+    # Espanso passes its config folder in $CONFIG. Read only max_regex_buffer_size
+    # from config/default.yml so the safe length follows the user's setting.
+    base = os.environ.get('CONFIG', '')
+    for name in ('default.yml', 'default.yaml'):
+        if not base:
+            break
+        try:
+            with open(os.path.join(base, 'config', name), 'rb') as f:
+                text = f.read(262144).decode('utf-8', 'replace')
+        except Exception:
+            continue
+        for line in text.splitlines():
+            if line.startswith('max_regex_buffer_size'):
+                v = line.split(':', 1)[-1].split('#', 1)[0].strip().strip('\'"')
+                if v.isdigit():
+                    return min(max(int(v), 16), 4096)
+        return 30
+    return BUFFER
 SQRT_STYLE = '@SQRT@'
 MINUS = @MINUS@
 THIN = @THIN@
@@ -530,6 +551,15 @@ def clusters(s):
 def nbase(s):
     return len([c for c in s if not unicodedata.combining(c)])
 
+def atoms(s):
+    # terms in a product: scripts, primes, ! and accents don't start a new term (eps_0, n!, x^2)
+    n = 0
+    for c in s:
+        if unicodedata.combining(c) or c in SUPOK or c in SUBOK or c in '!\u2032\u2033\u2034\u2057':
+            continue
+        n += 1
+    return n
+
 def balanced(s):
     d = 0
     for c in s:
@@ -549,12 +579,14 @@ def wrap(s):
         return s
     return '(' + s + ')'
 
+WRAPPABLE = ('group', 'frac', 'root', 'accent', 'font', 'binom')
+
 def group_base(item):
     # {a+b}^2 -> (a+b)^2 and \frac{a}{b}^2 -> (a/b)^2: a script must cover the whole operand.
     t, kind = item
-    if kind in ('group', 'frac', 'root') and nbase(t) > 1 and not wrapped(t):
+    if kind in WRAPPABLE and nbase(t) > 1 and not wrapped(t):
         return ['(' + t + ')', 'grouped']
-    if kind in ('group', 'frac', 'root'):
+    if kind in WRAPPABLE:
         return [t, 'grouped']
     return item
 
@@ -633,7 +665,7 @@ def frac(a, b):
             return VUL[k]
         return sup(a) + '\u2044' + sub(b)
     den = fwrap(b)
-    if den == b and nbase(b) > 1 and not all([c in DIG for c in b]) and b[0] not in DIFF:
+    if den == b and atoms(b) > 1 and not all([c in DIG for c in b]) and b[0] not in DIFF:
         den = '(' + b + ')'
     return fwrap(a) + '/' + den
 
@@ -641,10 +673,14 @@ def render(items):
     out = []
     for k in range(len(items)):
         t, kind = items[k]
+        if THIN and kind == 'func' and k > 0 and t:
+            pv = items[k - 1][0]
+            if pv and unicodedata.category(pv[-1])[0] in 'LN' and items[k - 1][1] != 'func':
+                out.append('\u2009')
         out.append(t)
         if THIN and kind in ('func', 'big') and k + 1 < len(items):
             nx = items[k + 1][0]
-            if nx and unicodedata.category(nx[0])[0] in 'LN':
+            if nx and (unicodedata.category(nx[0])[0] in 'LN' or (t.endswith(')') and nx[0] == '(')):
                 out.append('\u2009')
     return ''.join(out)
 
@@ -801,8 +837,8 @@ class Cv(object):
             return [s, 'func' if name == 'operatorname' else 'text']
         if g == 'font':
             c = self.pk()
-            if c == '{':
-                a = self.garg()
+            if c == '{' or c == '\\':
+                a = self.arg1()
             elif c and (c in LET or c in DIG):
                 a = c
                 self.i += 1
@@ -810,7 +846,7 @@ class Cv(object):
                 a = None
             if a is None:
                 return False
-            return [font(FONTCMD[name], a), 'sym']
+            return [font(FONTCMD[name], a), 'font']
         if g == 'frac':
             a = self.arg1()
             b = self.arg1() if a is not None else None
@@ -825,7 +861,7 @@ class Cv(object):
             p = sup(a)
             q = sub(b)
             if p is not None and q is not None:
-                return [p + 'C' + q, 'sym']
+                return [p + 'C' + q, 'binom']
             return ['C(' + a + ',' + b + ')', 'sym']
         if g == 'root':
             idx = None
@@ -910,10 +946,10 @@ class Cv(object):
             if a is None:
                 return [m, 'post']
             if name in SPANLR:
-                return [span_lr(a), 'sym']
+                return [span_lr(a), 'accent']
             if name in ARC:
-                return [arc(a), 'sym']
-            return [mark_each(a, m), 'sym']
+                return [arc(a), 'accent']
+            return [mark_each(a, m), 'accent']
         for p in OFFICE:
             if name.startswith(p) and len(name) == len(p) + 1 and name[-1] in LET:
                 return [font(OFFICE[p], name[-1]), 'sym']
@@ -1038,7 +1074,7 @@ def main():
     tok = os.environ.get('ESPANSO_TOK', '')
     out = tok
     try:
-        if len(tok.encode('utf-8')) <= LIMIT:
+        if len(tok.encode('utf-8')) <= max(8, buffer_size() - MARGIN):
             out = convert(tok)
     except Exception:
         out = tok
@@ -1187,7 +1223,8 @@ def _compact(src):
 def build_engine(tables, buffer_size=DEFAULT_BUFFER):
     special = {k: sorted(v) for k, v in SPECIAL_COMMANDS.items()}
     repl = {
-        "@LIMIT@": str(buffer_limit(buffer_size)),
+        "@BUFFER@": str(int(buffer_size)),
+        "@MARGIN@": str(SAFETY_MARGIN),
         "@SQRT@": "parens" if SETTINGS.get("sqrt_style") == "parens" else "vinculum",
         "@MINUS@": "True" if SETTINGS.get("minus_sign", True) else "False",
         "@THIN@": "True" if SETTINGS.get("thin_space_after_operators", True) else "False",
@@ -1253,13 +1290,36 @@ def build_regex(tables):
     T = f"[^{_EXCL}]"
     NL = f"[^A-Za-z{_EXCL}]"
     tail = f"(?:{NL}{T}*)?"            # token ends here, or continues with a non-letter
-    names = sorted(all_command_names(tables), key=lambda s: (-len(s), s))
+    def alt(xs):
+        return "|".join(sorted(xs, key=lambda s: (-len(s), s)))
+
+    # Structural commands only fire once their argument has started, so a bare
+    # "\frac" or "\text" (which would come back unchanged) never makes Espanso
+    # delete and retype the token.
+    sc = SPECIAL_COMMANDS
+    needs = {
+        "\\{": sc["text"] + sc["textfont"],
+        "[{\\\\0-9]": sc["font"] + sc["frac"] + sc["binom"] + sc["over"],
+        "[{\\\\]": [n for n in sc["pair"] if n not in ("norm", "ket", "bra")],
+    }
+    gated = {n for v in needs.values() for n in v}
+    names = all_command_names(tables) - gated
     ops = sorted(tables["operators"], key=lambda s: (-len(s), s))
+    sup_letters = "".join(sorted(c for c in SUPERSCRIPTS if c.isascii() and c.isalpha()))
+    sub_letters = "".join(sorted(c for c in SUBSCRIPTS if c.isascii() and c.isalpha()))
+    sup_other = "".join(sorted(({c for c in SUPERSCRIPTS if not c.isascii()} | set(SUPERSCRIPT_PASSTHROUGH)
+                                | set(SUPERSCRIPTS.values())) - {"*"}))
+    sub_other = "".join(sorted({c for c in SUBSCRIPTS if not c.isascii()} | set(SUBSCRIPTS.values())))
     alternatives = [
-        "\\\\(?:" + "|".join(names) + ")[A-Za-z]?" + tail,           # \command
+        "\\\\(?:" + alt(names) + ")[A-Za-z]?" + tail,                # \command
+    ] + [
+        "\\\\(?:" + alt(v) + ")" + nxt + T + "*" for nxt, v in needs.items()   # \frac{ \text{ ...
+    ] + [
         "\\\\[,:;!>|{}_^%#$/\\-\\&]" + T + "*",                          # \, \{ \| ...
-        "[\\^_][+\\-]?[A-Za-z]" + tail,                                  # x^n  x_i
-        "[\\^_](?:[{(\\\\0-9+\\-=*']|[^\\x00-\\x7f" + _EXCL + "])" + T + "*",  # x^2 x^{..}
+        "\\^[+\\-]?[" + sup_letters + "]" + tail,                        # x^n
+        "_[+\\-]?[" + sub_letters + "]" + tail,                            # x_i
+        "\\^(?:[{(\\\\0-9+\\-=*']|[" + sup_other + "])" + T + "*",          # x^2 x^{..}
+        "_(?:[{(\\\\0-9+\\-=]|[" + sub_other + "])" + T + "*",                # x_1 x_{..}
         "(?:" + "|".join(_rx_escape(o) for o in ops) + ")" + T + "*",   # -> <= ...
         "(?:" + "|".join(sorted(VULGAR_FRACTIONS)) + ")" + T + "*",      # 1/2
     ]
@@ -1296,8 +1356,9 @@ def render_match_yaml(regex, engine_src, python_cmd, inject_mode="auto", note=""
         "#",
         "# How it works: one regex fires on SPACE after a whitespace-free token that",
         "# contains math syntax. The embedded Python script (standard library only,",
-        "# no network, no file access) reads the token from ESPANSO_TOK and prints",
-        "# the Unicode result. Symbol tables are stored as 'name:hex-codepoint' pairs,",
+        "# no network) reads the token from ESPANSO_TOK and prints the Unicode result.",
+        "# Its only file access is reading max_regex_buffer_size from Espanso's own",
+        "# config/default.yml. Symbol tables are stored as 'name:hex-codepoint' pairs,",
         "# e.g. alpha:3b1 = U+03B1 (alpha).",
     ]
     if note:
@@ -1352,6 +1413,49 @@ def check_command_line(python_cmd, engine_src):
 # ╔══════════════════════════════════════════════════════════════════════════╗
 # ║  INSTALLER                                                               ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
+
+FONTCONFIG_SANS_FAMILIES = ["Carlito", "Calibri", "Liberation Sans", "Arial", "Noto Sans",
+                            "Open Sans", "Ubuntu", "Cantarell", "Helvetica"]
+
+
+def fontconfig_rule_path():
+    base = Path(os.environ.get("XDG_CONFIG_HOME") or Path.home() / ".config")
+    return base / "fontconfig" / "conf.d" / "99-libreoffice-ppt-math.conf"
+
+
+def render_fontconfig_rule(font="DejaVu Sans"):
+    aliases = "\n".join(
+        f'  <alias binding="strong"><family>{fam}</family><accept><family>{font}</family></accept></alias>'
+        for fam in FONTCONFIG_SANS_FAMILIES)
+    return (
+        '<?xml version="1.0"?>\n<!DOCTYPE fontconfig SYSTEM "fonts.dtd">\n'
+        f"<!-- {HEADER_MARK}: {GENERATED_BY}.\n"
+        f"     When a sans font lacks a math character (combining accents, sub/superscripts,\n"
+        f"     arrows ...), take it from {font} instead of a random (often serif) font.\n"
+        "     Your own text keeps its font. Remove this file to undo. -->\n"
+        "<fontconfig>\n" + aliases + "\n"
+        f'  <alias binding="strong"><family>sans-serif</family><prefer><family>{font}</family></prefer></alias>\n'
+        "</fontconfig>\n")
+
+
+def install_sans_fallback():
+    if os.name == "nt" or sys.platform == "darwin":
+        print("--sans-fallback uses fontconfig, which only applies on Linux/BSD. On Windows and macOS,\n"
+              "set your math text to a font such as Cambria Math or DejaVu Sans instead.")
+        return False
+    if not shutil.which("fc-match"):
+        print("Warning: fontconfig tools not found; the rule is written but cannot be checked.")
+    path = fontconfig_rule_path()
+    text = render_fontconfig_rule()
+    import xml.dom.minidom
+    xml.dom.minidom.parseString(text.replace('<!DOCTYPE fontconfig SYSTEM "fonts.dtd">', ""))  # never write broken XML
+    atomic_write(path, text)
+    print(f"Installed font fallback rule {path}\nRestart LibreOffice to apply it.")
+    if shutil.which("fc-match") and "DejaVu Sans" not in subprocess.run(
+            ["fc-list", ":family=DejaVu Sans", "family"], stdout=subprocess.PIPE, text=True).stdout:
+        print("Warning: DejaVu Sans is not installed (Debian/Ubuntu/Mint: sudo apt install fonts-dejavu-core).")
+    return True
+
 
 GLOBAL_MATCH = Path("match") / "ppt_math.yml"
 LO_MATCH = Path("match") / "_ppt_math.yml"
@@ -1667,7 +1771,9 @@ TEST_CASES = [
     ("\\sqrt[n]{x}", "ⁿ√x"), ("\\sqrt", "√"), ("\\cbrt{8}", "∛8"), ("\\sqrtx", "√x"),
     ("\\frac{1}{2}", "½"), ("\\frac12", "½"), ("\\frac{3}{16}", "³⁄₁₆"),
     ("\\frac{a+b}{c}", "(a+b)/c"), ("\\frac{dy}{dx}", "dy/dx"), ("\\frac{1}{x}", "1/x"),
-    ("\\frac{1}{2\\pi}", "1/(2π)"), ("\\frac{d^2y}{dx^2}", "d²y/dx²"), ("\\frac{\\pi}{4}", "π/4"),
+    ("\\frac{1}{2\\pi}", "1/(2π)"), ("\\frac{\\rho}{\\varepsilon_0}", "ρ/ε₀"),
+    ("\\frac{x^n}{n!}", "xⁿ/n!"), ("\\frac{P}{\\sigma^2}", "P/σ²"), ("n\\log{n}", "n\u2009log\u2009n"),
+    ("\\lim_{h\\to0}\\frac{f(x+h)-f(x)}{h}", "lim_(h→0)\u2009(f(x+h)−f(x))/h"), ("\\frac{d^2y}{dx^2}", "d²y/dx²"), ("\\frac{\\pi}{4}", "π/4"),
     ("1/2", "½"), ("x+1/2", "x+½"), ("11/2", "11/2"), ("1/20", "1/20"),
     ("\\binom{n}{k}", "ⁿCₖ"),
     # --- sets & logic ---
@@ -1697,6 +1803,9 @@ TEST_CASES = [
     ("(a+b)^2", "(a+b)²"), ("\\sqrt{x}^2", "(√x)²"), ("\\underset{i}{a+b}", "(a+b)ᵢ"),
     ("\\overset{n}{a+b}", "(a+b)ⁿ"), ("\\stackrel{n}{a+b}", "(a+b)ⁿ"),
     ("\\underset{i}{x}", "xᵢ"), ("\\overset{f}{\\to}", "→ᶠ"),
+    ("\\vec{AB}^2", "(A⃗B⃗)²"), ("\\overline{AB}^2", "(A̅B̅)²"), ("\\hat{x}^2", "x̂²"),
+    ("\\mathbf{ab}^2", "(𝐚𝐛)²"), ("\\mathbf{v}^2", "𝐯²"), ("\\binom{n}{k}^2", "(ⁿCₖ)²"),
+    ("\\mathbf\\alpha", "α"), ("\\text{max}_i", "maxᵢ"),
     # --- things that must stay untouched ---
     ("\\foo", "\\foo"), ("http://a.b/x_1", "http://a.b/x_1"),
     ("C:\\temp\\alpha", "C:\\temp\\alpha"), ("me@x.com^2", "me@x.com^2"),
@@ -1708,6 +1817,9 @@ NON_MATH_TOKENS = [
     "hello", "don't", "snake_case", "__init__", "e-mail", "24/7", "and/or",
     "C:\\Users\\Pavan", "\\newline", "x_axis", "@user", "#tag", "50%",
     "(see", "note:", "A-level", "re-use", "$5", "a.b.c", "x", "ab", "\\",
+    # would come back unchanged -> must not fire (no delete-and-retype flicker)
+    "v_y", "x^q", "x_C", "x^\u221e", "x_*", "\\frac", "\\text", "\\mathbb", "\\abs",
+    "\\mathbb(x+1)", "\\binom", "\\overset", "\\fracx",
 ]
 
 
@@ -1826,6 +1938,8 @@ def main(argv=None):
     p.add_argument("--python", help="Python interpreter Espanso should run")
     p.add_argument("--buffer-size", type=int, metavar="N",
                    help="set Espanso's max_regex_buffer_size (default 30) to allow longer expressions")
+    p.add_argument("--sans-fallback", action="store_true",
+                   help="Linux: make LibreOffice take missing math characters from DejaVu Sans")
     p.add_argument("--inject-mode", choices=["auto", "clipboard", "keys"], default="auto",
                    help="how Espanso types the result (clipboard avoids app autocorrect re-firing)")
     argv = list(sys.argv[1:] if argv is None else argv)
@@ -1880,10 +1994,14 @@ def main(argv=None):
         ok = run_self_test(tables, engine_src, regex, args.python or (sys.executable if not args.install else python_cmd))
         return 0 if ok else 1
 
+    if args.sans_fallback and not (args.install or args.uninstall):
+        return 0 if install_sans_fallback() else 1
+
     if args.uninstall:
         removed = []
         for rel in (GLOBAL_MATCH, LO_MATCH, LO_CONFIG):
             remove_if_ours(base / rel, removed)
+        remove_if_ours(fontconfig_rule_path(), removed)
         for path in removed:
             print(f"Removed {path}")
         if not removed:
@@ -1929,6 +2047,8 @@ def main(argv=None):
             print(f"Installed {match_path}")
         for path in removed:
             print(f"Removed old {path}")
+        if args.sans_fallback:
+            install_sans_fallback()
         print(f"{len(all_command_names(tables))} commands, {len(tables['operators'])} ASCII operators, "
               f"{len(VULGAR_FRACTIONS)} fractions. Espanso reloads automatically.")
         print_diagnostics(base, [match_path], tables, buffer_size, args.libreoffice_only,
