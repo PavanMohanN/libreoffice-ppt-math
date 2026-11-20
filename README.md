@@ -1,4 +1,4 @@
-[![Espanso Hub](https://img.shields.io/badge/Espanso%20Hub-libreoffice--ppt--math-00b894?logo=espanso)](https://hub.espanso.org/packages/libreoffice-ppt-math)
+[![Espanso Hub](https://img.shields.io/badge/Espanso%20Hub-libreoffice--ppt--math-00b894?logo=espanso)](https://hub.espanso.org/libreoffice-ppt-math)
 
 # libreoffice-ppt-math
 
