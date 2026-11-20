@@ -1061,6 +1061,8 @@ def convert(tok):
     low = tok.lower()
     if '://' in tok or low.startswith('www.') or '@' in tok:
         return tok
+    if (tok[0] == '/' and isin(tok[1:2], LET + DIG + '._')) or tok[:2] in ('~/', './') or tok[:3] == '../':
+        return tok
     if len(tok) > 2 and tok[0] in LET and tok[1] == ':' and tok[2] in '\\/':
         j = 3
         while j < len(tok) and tok[j] in LET:
@@ -1732,6 +1734,323 @@ def print_diagnostics(base, own_paths, tables, buffer_size, lo_only, python_cmd,
 
 
 # ╔══════════════════════════════════════════════════════════════════════════╗
+# ║  CHEAT SHEET -- CHEATSHEET.md is generated from the same tables and      ║
+# ║  converter as package.yml, so every example is exactly what you'll get. ║
+# ╚══════════════════════════════════════════════════════════════════════════╝
+
+CHEATSHEET_FILE = "CHEATSHEET.md"
+
+# Worked examples, by field. Each one is checked by --self-test.
+CHEATSHEET_RECIPES = [
+    ("Algebra", [
+        ("x^2+y^2=r^2", "circle"), ("x=\\frac{-b\\pm\\sqrt{b^2-4ac}}{2a}", "quadratic formula"),
+        ("(a+b)^2=a^2+2ab+b^2", "binomial square"), ("a^{m+n}=a^m\\cdot{a^n}", "index law"),
+        ("|x-a|<\\delta", "absolute value"), ("x\\neq0", "not equal"), ("\\log_2{8}=3", "logarithm"),
+    ]),
+    ("Calculus", [
+        ("\\lim_{x\\to0}\\frac{\\sin{x}}{x}=1", "limit"), ("\\lim_{n\\to\\infty}a_n", "limit at infinity"),
+        ("\\frac{dy}{dx}", "derivative"), ("f'(x)=3x^2", "prime notation"), ("\\frac{\\partial{f}}{\\partial{x}}", "partial derivative"),
+        ("\\int_0^1", "definite integral (type f(x)dx after a space)"), ("\\int_{-\\infty}^{\\infty}", "improper integral"),
+        ("\\oint_C", "contour integral"), ("\\iint_D", "double integral"), ("\\nabla\\cdot\\vec{F}", "divergence"),
+        ("\\nabla^2{u}", "Laplacian"), ("\\dot{x}", "time derivative"), ("\\ddot{x}", "second time derivative"),
+    ]),
+    ("Sums, products and series", [
+        ("\\sum_{i=1}^{n}x_i", "sum"), ("\\sum_{n=0}^{\\infty}\\frac{x^n}{n!}", "power series"),
+        ("\\prod_{k=1}^n{k}", "product"), ("\\bigcup_{i=1}^n{A_i}", "big union"), ("\\bigcap_{i}{A_i}", "big intersection"),
+    ]),
+    ("Sets and logic", [
+        ("A\\cup{B}", "union"), ("A\\cap{B}", "intersection"), ("A\\setminus{B}", "difference"),
+        ("A\\subseteq{B}", "subset"), ("x\\in{A}", "element of"), ("x\\notin{A}", "not an element"),
+        ("A^c", "complement"), ("\\emptyset", "empty set"), ("\\{x\\in\\R\\mid{x}>0\\}", "set-builder"),
+        ("\\forall{x}\\exists{y}", "quantifiers"), ("p\\land{q}", "and"), ("p\\lor{q}", "or"), ("\\neg{p}", "not"),
+        ("p\\implies{q}", "implies"), ("p\\iff{q}", "if and only if"), ("p<=>q", "if and only if (ASCII)"),
+        ("\\N\\subset\\Z\\subset\\Q\\subset\\R", "number systems"),
+    ]),
+    ("Geometry", [
+        ("\\overline{AB}", "segment AB"), ("\\ray{AB}", "ray AB"), ("\\line{AB}", "line AB"), ("\\arc{AB}", "arc AB"),
+        ("\\angle{ABC}=90^\\circ", "angle"), ("m\\angle{A}=45^\\circ", "measure of an angle"),
+        ("\\triangle{ABC}\\cong\\triangle{DEF}", "congruent triangles"), ("\\triangle{ABC}\\sim\\triangle{DEF}", "similar triangles"),
+        ("\\overline{AB}\\parallel\\overline{CD}", "parallel"), ("\\overline{AB}\\perp\\overline{CD}", "perpendicular"),
+        ("\\pi{r}^2", "area of a circle"), ("AB=\\sqrt{(x_2-x_1)^2+(y_2-y_1)^2}", "distance formula"),
+    ]),
+    ("Linear algebra", [
+        ("A^{-1}", "inverse"), ("A^T", "transpose"), ("A^\\top", "transpose"), ("A^\\dagger", "conjugate transpose"),
+        ("\\det(A)", "determinant"), ("\\vec{v}", "vector"), ("\\mathbf{x}\\in\\R^n", "bold vector"),
+        ("\\norm{x}_2", "norm"), ("\\langle{u,v}\\rangle", "inner product"), ("\\mathbf{w}^H\\mathbf{h}", "Hermitian product"),
+    ]),
+    ("Probability and statistics", [
+        ("X\\sim\\mathcal{N}(\\mu,\\sigma^2)", "normal distribution"), ("\\mathbb{E}[X]", "expectation"),
+        ("\\Pr(A|B)", "conditional probability"), ("\\mathrm{Var}(X)=\\sigma^2", "variance"), ("\\bar{x}", "sample mean"),
+        ("\\hat{\\theta}", "estimate"), ("\\binom{n}{k}", "n choose k"), ("\\chi^2", "chi-squared"),
+    ]),
+    ("Physics and engineering", [
+        ("E=mc^2", "mass-energy"), ("\\vec{F}=m\\vec{a}", "Newton's second law"),
+        ("\\nabla\\cdot\\vec{E}=\\frac{\\rho}{\\varepsilon_0}", "Gauss's law"), ("\\hbar\\omega", "photon energy"),
+        ("\\ket{\\psi}", "quantum state"), ("\\lambda/2", "half wavelength"), ("e^{j\\theta_n}", "phase term"),
+        ("C=\\log_2(1+\\text{SNR})", "Shannon capacity"), ("\\text{SNR}=\\frac{P}{\\sigma^2}", "signal-to-noise ratio"),
+        ("|h|^2", "channel gain"), ("\\theta_n\\in[0,2\\pi)", "phase range"), ("90^\\circ", "degrees"), ("25\\degc", "Celsius"),
+    ]),
+    ("Number theory and complexity", [
+        ("a\\mid{b}", "divides"), ("a\\equiv{b}\\pmod{n}", "congruence"), ("\\gcd(a,b)", "greatest common divisor"),
+        ("\\lfloor{x}\\rfloor", "floor"), ("\\ceil{x}", "ceiling"), ("\\mathcal{O}(n\\log{n})", "big-O"), ("\\Theta(n^2)", "big-Theta"),
+    ]),
+]
+
+FRIENDLY_NAMES = {
+    "∑": "sum (sigma)", "∏": "product (pi)", "∫": "integral", "∞": "infinity", "∂": "partial derivative",
+    "∇": "nabla / del", "∈": "is an element of", "∉": "is not an element of", "⊂": "proper subset",
+    "⊆": "subset or equal", "∪": "union", "∩": "intersection", "∅": "empty set", "∀": "for all",
+    "∃": "there exists", "¬": "not", "∧": "and", "∨": "or", "⇒": "implies", "⇔": "if and only if",
+    "→": "to / maps to / tends to", "≠": "not equal", "≤": "less than or equal", "≥": "greater than or equal",
+    "≈": "approximately equal", "≡": "identical / congruent mod", "≅": "congruent", "∼": "similar / distributed as",
+    "∝": "proportional to", "±": "plus-minus", "∓": "minus-plus", "×": "times / cross product",
+    "÷": "divide", "⋅": "dot product / times", "∘": "composition", "√": "square root", "∠": "angle",
+    "⊥": "perpendicular / bottom", "∥": "parallel", "△": "triangle", "°": "degree", "ℝ": "real numbers",
+    "ℕ": "natural numbers", "ℤ": "integers", "ℚ": "rational numbers", "ℂ": "complex numbers",
+    "∴": "therefore", "∵": "because", "ℏ": "reduced Planck constant", "ℓ": "script l (length)",
+    "∣": "divides / such that", "↦": "maps to", "∆": "increment / symmetric difference",
+}
+
+
+def _md(s):
+    """Escape text for a Markdown table cell (GitHub flavour)."""
+    out = []
+    for c in s:
+        if c in "\\`*_[]<>#|~":
+            out.append("\\" + c)
+        else:
+            out.append(c)
+    return "".join(out)
+
+
+def _code(s):
+    return "`" + s.replace("|", "\\|") + "`"
+
+
+def _inp(s):
+    """An input cell; long formulas are flagged because they need a bigger Espanso buffer."""
+    long = len(s.encode("utf-8")) > buffer_limit(DEFAULT_BUFFER)
+    return _code(s) + (" ✱" if long else "")
+
+
+def _show(v):
+    """How a result is displayed: invisible characters described, lone accents on a dotted circle."""
+    if all(unicodedata.category(c) in ("Zs", "Cf", "Cc") or c.isspace() for c in v):
+        return "(" + ", ".join(unicodedata.name(c, "space").lower() for c in v) + ")"
+    if unicodedata.combining(v[0]):
+        v = "◌" + v
+    return _md(v)
+
+
+def _describe(v):
+    if v in FRIENDLY_NAMES:
+        return FRIENDLY_NAMES[v]
+    names = []
+    for c in v:
+        n = unicodedata.name(c, "")
+        n = n.replace("COMBINING ", "").replace("MATHEMATICAL ", "").lower()
+        if n and n not in names:
+            names.append(n)
+    return " + ".join(names) if names else ""
+
+
+def _row(*cells):
+    return "| " + " | ".join(cells) + " |"
+
+
+def build_cheatsheet(tables, engine_src):
+    eng = load_engine(engine_src)
+    conv = eng["convert"]
+    L = []
+    add = L.append
+    n_cmds = len(all_command_names(tables))
+    add("# Cheat sheet: every formula you can type\n")
+    add(f"*Generated by `generate_rules.py --cheatsheet` from the same tables as the package "
+        f"({n_cmds} commands, {len(tables['operators'])} shortcuts, {len(VULGAR_FRACTIONS)} fractions). "
+        "Every result on this page was produced by the converter itself.*\n")
+    add("## Contents\n")
+    sections = ["Start here: the 5 rules", "Your first 15 formulas", "Recipes by subject",
+                "Superscripts and subscripts", "Fractions", "Roots", "Limits, sums and integrals",
+                "Accents and geometry marks", "Brackets and pairs", "Fonts: blackboard, script, bold",
+                "Negation with \\not", "Text and spacing", "ASCII shortcuts (no backslash)"]
+    sections += [title for title, _ in SYMBOL_TABLES] + ["Function names", "Troubleshooting"]
+    for s in sections:
+        anchor = re.sub(r"[^a-z0-9 -]", "", s.lower()).replace(" ", "-")
+        add(f"- [{s}](#{anchor})")
+    add("")
+
+    add("## Start here: the 5 rules\n")
+    add("1. **Type the formula with no spaces in it, then press Space.** The whole formula changes at once.")
+    add("2. **Commands start with a backslash** `\\`: `\\alpha` gives α, `\\int` gives ∫.")
+    add("3. **`^` raises, `_` lowers.** One character: `x^2`, `x_1`. More than one: use braces `x^{n+1}` or brackets `x^(n+1)`.")
+    add("4. **Braces `{ }` group things.** `\\sqrt{x+1}` puts the whole of x+1 under the root; `\\frac{a}{b}` is a over b.")
+    add("5. **Made a mistake?** Press Backspace straight away to get back exactly what you typed.\n")
+    add(f"> ✱ marks formulas longer than {buffer_limit(DEFAULT_BUFFER)} characters. They need one extra line in Espanso's "
+        "`config/default.yml`: `max_regex_buffer_size: 64` (run `espanso path config` to find the folder). "
+        "Without it they stay as typed.\n")
+    add("> Tip: want a space *inside* a formula? Type `~` (or `\\,` for a thin space). "
+        "Want spaces *around* operators? Put real spaces there: `A \\cup B` gives `A ∪ B`.\n")
+
+    add("## Your first 15 formulas\n")
+    add(_row("Type this, then Space", "You get"))
+    add(_row("---", "---"))
+    for src in ["x^2", "x_1", "\\alpha", "\\pi{r}^2", "a<=b", "a!=b", "x->y", "\\frac{1}{2}", "\\sqrt{2}",
+                "\\sqrt{x+1}", "\\int_0^1", "\\sum_{i=1}^{n}", "\\lim_{x\\to0}", "A\\cup{B}", "90^\\circ"]:
+        add(_row(_inp(src), _show(conv(src))))
+    add("")
+
+    add("## Recipes by subject\n")
+    add("Copy any left-hand entry, type it, press Space.\n")
+    for field, items in CHEATSHEET_RECIPES:
+        add(f"### {field}\n")
+        add(_row("Type", "You get", "What it is"))
+        add(_row("---", "---", "---"))
+        for src, note in items:
+            add(_row(_inp(src), _show(conv(src)), note))
+        add("")
+
+    add("## Superscripts and subscripts\n")
+    add(_row("Type", "You get", "Note"))
+    add(_row("---", "---", "---"))
+    for src, note in [("x^2", "single character"), ("x^10", "a whole number"), ("x^{n+1}", "group with braces"),
+                      ("x^(n+1)", "or with brackets, PowerPoint style"), ("x^{-1}", "negative power"),
+                      ("x_1", "subscript"), ("a_{ij}", "two-letter subscript"), ("x_n^2", "both at once"),
+                      ("\\alpha_1", "on a command"), ("{a+b}^2", "on a group: brackets are added"),
+                      ("e^{-x^2}", "nested"), ("A^T", "transpose"), ("f^\\prime", "prime"), ("90^\\circ", "degrees"),
+                      ("v_y", "no Unicode subscript y: stays readable")]:
+        add(_row(_inp(src), _show(conv(src)), note))
+    add("")
+    sup_l = "".join(sorted(k for k in SUPERSCRIPTS if len(k) == 1 and k.isascii()))
+    sub_l = "".join(sorted(k for k in SUBSCRIPTS if len(k) == 1 and k.isascii()))
+    add("**Characters that can be raised:** " + _md(sup_l) + " and Greek " +
+        _md("".join(k for k in SUPERSCRIPTS if not k.isascii() and unicodedata.category(k) == "Ll")) + ".  ")
+    add("**Characters that can be lowered:** " + _md(sub_l) + " and Greek " +
+        _md("".join(k for k in SUBSCRIPTS if not k.isascii() and unicodedata.category(k) == "Ll")) + ".  ")
+    add("Anything else is written in linear form, e.g. `v_y`, `e^(iπ)`, `lim_(x→0)`. This is a limit of Unicode itself.\n")
+
+    def table(title, rows, intro=""):
+        add(f"## {title}\n")
+        if intro:
+            add(intro + "\n")
+        add(_row("Type", "You get", "Note"))
+        add(_row("---", "---", "---"))
+        for src, note in rows:
+            res = conv(src)
+            if not note and len(res) == 1:
+                note = _describe(res)
+            add(_row(_inp(src), _show(res), note))
+        add("")
+
+    table("Fractions", [
+        ("\\frac{1}{2}", "common fraction"), ("\\frac12", "short form"), ("1/2", "typed directly"),
+        ("\\frac{3}{16}", "any numbers"), ("\\frac{a}{b}", "letters"), ("\\frac{a+b}{c}", "brackets added when needed"),
+        ("\\frac{1}{2\\pi}", ""), ("\\frac{dy}{dx}", "derivatives stay clean"), ("\\frac{a}{b}^2", "power of a fraction"),
+        ("\\dfrac{a}{b}", "\\dfrac, \\tfrac, \\cfrac work too"), ("\\binom{n}{k}", "binomial coefficient"),
+    ], "Unicode cannot stack a fraction, so fractions are written on one line. Vulgar fractions: " +
+       ", ".join(f"`{k}` {v}" for k, v in VULGAR_FRACTIONS.items()) + ".")
+    table("Roots", [
+        ("\\sqrt{x}", ""), ("\\sqrt{x+1}", "bar covers the whole term"), ("\\sqrt(x+1)", "brackets work too"),
+        ("\\sqrt{b^2-4ac}", ""), ("\\sqrt[3]{x}", "cube root"), ("\\sqrt[4]{x}", "fourth root"), ("\\sqrt[n]{x}", "nth root"),
+        ("\\cbrt{8}", "Office style"), ("\\sqrt", "the sign alone"), ("\\sqrt{x}^2", "power of a root"),
+    ])
+    table("Limits, sums and integrals", [
+        ("\\int_a^b", ""), ("\\int_0^1", ""), ("\\int_{0}^{\\infty}", "∞ cannot be raised, so it stays linear"),
+        ("\\iint_D", "double"), ("\\iiint_V", "triple"), ("\\oint_C", "contour"), ("\\sum_{i=1}^{n}", ""),
+        ("\\sum_{i=1}^{n}x_i", "a thin space is added after the sign"), ("\\prod_{k=1}^n", ""),
+        ("\\lim_{x\\to0}", "arrows cannot be lowered, so it stays linear"), ("\\lim_{n\\to\\infty}a_n", ""),
+        ("\\max_x", ""), ("\\min_{x\\in{A}}", ""), ("\\sup_n", ""), ("\\bigcup_{i=1}^n", ""), ("\\sum\\limits_i", "\\limits is ignored"),
+    ])
+    table("Accents and geometry marks", [(f"\\{n}{{x}}" if n not in ("seg", "ray", "line", "arc", "overarc",
+          "wideparen", "overline", "overleftrightarrow", "overrightarrow", "overleftarrow", "underline")
+          else f"\\{n}{{AB}}", _describe(m)) for n, m in ACCENTS.items()] +
+          [("x\\hat", "Office style: accent after the letter")],
+          "LaTeX style `\\hat{x}`, or Office style `x\\hat`. Multi-letter arguments get the mark on every letter.")
+    table("Brackets and pairs", [
+        ("\\abs{x}", "absolute value"), ("\\norm{v}", "norm"), ("\\floor{x}", "floor"), ("\\ceil{x}", "ceiling"),
+        ("\\ket{\\psi}", "ket"), ("\\bra{\\phi}", "bra"), ("\\braket{a}", "bra-ket"), ("\\set{1,2}", "set braces"),
+        ("\\langle{x}\\rangle", "angle brackets"), ("\\left(x\\right)", "\\left and \\right are ignored"),
+        ("\\{x\\}", "literal braces"), ("\\|x\\|", "double bar"), ("a\\pmod{n}", "modulo"),
+    ])
+    fonts = [("mathbb", "blackboard bold"), ("mathcal", "script / calligraphic"), ("mathfrak", "fraktur"),
+             ("mathbf", "bold"), ("mathit", "italic"), ("boldsymbol", "bold italic"), ("mathsf", "sans-serif"),
+             ("mathsfbf", "sans-serif bold"), ("mathtt", "monospace")]
+    add("## Fonts: blackboard, script, bold\n")
+    add(_row("Type", "You get", "Style"))
+    add(_row("---", "---", "---"))
+    for n, d in fonts:
+        add(_row(_code(f"\\{n}{{ABCxyz123}}"), _show(conv(f"\\{n}{{ABCxyz123}}")), d))
+    add("")
+    add("Office shortcuts also work: `\\doubleR` gives " + conv("\\doubleR") + ", `\\scriptL` gives " +
+        conv("\\scriptL") + ", `\\frakturg` gives " + conv("\\frakturg") + " (any letter A–Z, a–z). "
+        "Number sets have short forms: `\\N` `\\Z` `\\Q` `\\R` `\\C`.\n")
+    table("Negation with \\not", [(f"\\not{x}", "") for x in ["=", "<", ">", "\\in", "\\subset", "\\subseteq",
+          "\\equiv", "\\sim", "\\cong", "\\approx", "\\exists", "\\mid", "\\parallel", "\\to", "\\Rightarrow"]],
+          "Put `\\not` before a relation to cross it out.")
+    table("Text and spacing", [
+        ("\\text{if}", "upright text (no spaces inside)"), ("\\operatorname{sgn}(x)", "your own function name"),
+        ("\\alpha~\\beta", "space inside a formula"), ("a\\,b", "thin space"), ("a\\;b", "thick space"), ("a\\quad{b}", "em space"),
+        ("a\\qquad{b}", "two em spaces"), ("\\overset{def}{=}", "defined as"), ("\\overset{?}{=}", "questioned equality"),
+        ("\\xrightarrow{f}", "labelled arrow"), ("\\underset{i}{a+b}", "label underneath"),
+    ])
+
+    add("## ASCII shortcuts (no backslash)\n")
+    add("These work inside any formula. The longest one always wins, so `<=>` is never mistaken for `<=`.\n")
+    add(_row("Type", "You get", "What it is"))
+    add(_row("---", "---", "---"))
+    for seq, v in sorted(tables["operators"].items(), key=lambda kv: (-len(kv[0]), kv[0])):
+        add(_row(_code(seq), _show(v), _describe(v)))
+    add("")
+
+    for title, table_ in SYMBOL_TABLES:
+        add(f"## {title}\n")
+        add(_row("Type", "You get", "What it is"))
+        add(_row("---", "---", "---"))
+        for name in sorted(table_, key=lambda n: (n.lower(), n)):
+            if name in tables["symbols"]:
+                v = tables["symbols"][name]
+                add(_row(_code("\\" + name), _show(v), _describe(v)))
+        add("")
+    if USER_SYMBOLS:
+        add("## Your own symbols\n")
+        add(_row("Type", "You get"))
+        add(_row("---", "---"))
+        for name, v in USER_SYMBOLS.items():
+            add(_row(_code("\\" + _clean_name(name)), _show(v)))
+        add("")
+
+    add("## Function names\n")
+    add("Written upright, with a thin space before a following letter, as in printed maths: "
+        f"`\\sin\\theta` gives {conv(chr(92) + 'sin' + chr(92) + 'theta')}, `\\log_2{{n}}` gives {conv(chr(92) + 'log_2{n}')}.\n")
+    add(", ".join(f"`\\{f}`" for f in sorted(tables["functions"], key=str.lower)) + "\n")
+
+    add("## Troubleshooting\n")
+    tips = [
+        ("Nothing happened.", "Did you press Space? Conversion happens on Space, not Enter. Is there a space inside the formula? Remove it."),
+        ("A long formula stayed exactly as typed (formulas marked ✱).", "Long formulas need a bigger buffer: add `max_regex_buffer_size: 64` to Espanso's `config/default.yml`. "
+                                                "Without it, formulas up to 25 characters convert."),
+        ("`v_y` or `x^q` stayed as typed.", "Unicode has no subscript y or superscript q. That is the readable fallback, not an error."),
+        ("`a<->b` became `←>`, or text vanished.", "LibreOffice's own AutoCorrect got there first. See *Step 4* in the README."),
+        ("Symbols look like a different font.", "Your font lacks them. See *Fonts* in the README, or use DejaVu Sans."),
+        ("I wanted the raw text back.", "Press Backspace immediately after the conversion."),
+        ("A command is missing.", "Add it yourself in `USER_SYMBOLS` in `generate_rules.py`, or open an issue on GitHub."),
+    ]
+    for q, a in tips:
+        add(f"**{q}** {a}\n")
+    return "\n".join(L).rstrip() + "\n"
+
+
+CHEATSHEET_UNCHANGED = {"v_y"}     # rows that deliberately show text staying as typed
+
+
+def cheatsheet_examples(tables=None, engine_src=None):
+    """Every input shown in a table of the cheat sheet."""
+    if tables is None:
+        return [src for _, items in CHEATSHEET_RECIPES for src, _ in items]
+    text = build_cheatsheet(tables, engine_src)
+    return [m.group(1).replace("\\|", "|") for m in re.finditer(r"^\| `([^`]+)`(?: ✱)? \|", text, re.M)]
+
+
+# ╔══════════════════════════════════════════════════════════════════════════╗
 # ║  SELF-TEST                                                               ║
 # ╚══════════════════════════════════════════════════════════════════════════╝
 
@@ -1809,7 +2128,7 @@ TEST_CASES = [
     # --- things that must stay untouched ---
     ("\\foo", "\\foo"), ("http://a.b/x_1", "http://a.b/x_1"),
     ("C:\\temp\\alpha", "C:\\temp\\alpha"), ("me@x.com^2", "me@x.com^2"),
-    ("D:/x_1", "D:/x_1"), ("T:\\R^n\\to\\R^m", "T:ℝⁿ→ℝᵐ"), ("x=\\not\\equiv", "x=≢"),
+    ("D:/x_1", "D:/x_1"), ("/home/x_1", "/home/x_1"), ("~/a_1.txt", "~/a_1.txt"), ("./x^2", "./x^2"), ("T:\\R^n\\to\\R^m", "T:ℝⁿ→ℝᵐ"), ("x=\\not\\equiv", "x=≢"),
 ]
 
 # Typed text -> must NOT trigger Espanso at all (no flicker, no change).
@@ -1848,6 +2167,16 @@ def run_self_test(tables, engine_src, regex, python_cmd=None):
         if rx.search(word + " "):
             failures += 1
             print(f"  FAIL  regex fires on ordinary text {word!r}")
+    # Every example in the cheat sheet must really convert when typed (regex fires, text changes).
+    examples = cheatsheet_examples(tables, engine_src)
+    for src in examples:
+        if src in CHEATSHEET_UNCHANGED:
+            continue
+        m = rx.search(src + " ")
+        got = convert(src)
+        if not m or m.group("tok") != src or got == src or re.search(r"\\[A-Za-z]", got):
+            failures += 1
+            print(f"  FAIL  cheat-sheet example {src!r} does not convert as a whole (got {got!r})")
     # Space-separated tokens are independent; leading context is never consumed.
     for typed, tok in [("foo \\alpha ", "\\alpha"), ("a\r\\beta ", "\\beta"),
                        ("x^2 y^2 ", "y^2")]:
@@ -1872,7 +2201,7 @@ def run_self_test(tables, engine_src, regex, python_cmd=None):
         if not ok:
             failures += 1
             print(f"  FAIL  engine via {python_cmd}: {msg}")
-    total = 2 * len(TEST_CASES) + len(NON_MATH_TOKENS) + 4
+    total = 2 * len(TEST_CASES) + len(NON_MATH_TOKENS) + 4 + len(examples) - len(CHEATSHEET_UNCHANGED)
     print(f"Self-test: {total - failures}/{total} checks passed.")
     return failures == 0
 
@@ -1932,6 +2261,7 @@ def main(argv=None):
                    help="show how expressions convert")
     p.add_argument("--list", dest="list_filter", nargs="?", const="", metavar="TEXT",
                    help="list every supported command (optionally filtered)")
+    p.add_argument("--cheatsheet", action="store_true", help=f"write {CHEATSHEET_FILE} (every command, with examples)")
     p.add_argument("--stdout", action="store_true", help="print the match YAML instead of writing it")
     p.add_argument("--output", type=Path, help="output path when not installing")
     p.add_argument("--espanso-dir", help="Espanso config directory (default: auto-detect)")
@@ -1988,6 +2318,12 @@ def main(argv=None):
         eng = load_engine(engine_src)
         for expr in args.try_exprs:
             print(f"  {expr}  ->  {eng['convert'](expr)}")
+        return 0
+
+    if args.cheatsheet:
+        out = args.output or (repo_root() / CHEATSHEET_FILE)
+        atomic_write(out, build_cheatsheet(tables, build_engine(tables, 512)))
+        print(f"Wrote {out}")
         return 0
 
     if args.self_test:
